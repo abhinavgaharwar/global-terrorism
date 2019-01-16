@@ -1,0 +1,130 @@
+---
+title: "Global Terrorism Data Analysis"
+author: "Group1"
+date: "03 September 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+gtd_70to91 <- read.csv("D:/My Data/EDA/Data Set/data-society-global-terrorism-data/original/gtd_70to91_49566.csv")
+gtd_92to11 <- read.csv("D:/My Data/EDA/Data Set/data-society-global-terrorism-data/original/gtd_92to11_no 93_55072.csv")
+gtd_12to15 <- read.csv("D:/My Data/EDA/Data Set/data-society-global-terrorism-data/original/gtd_12to15_52134.csv")
+gtd_1993 <- read.csv("D:/My Data/EDA/Data Set/data-society-global-terrorism-data/original/gtd1993_748.csv")
+
+gtd_70to15 <- rbind(gtd_70to91, gtd_92to11, gtd_12to15)
+gtd_70to15$casualities <- sum(gtd_70to15$nkill, gtd_70to15$nwound, na.rm = T)
+
+
+```
+
+#1993 data has been excluded from plotting, since the appropriate data is not available. We have country level statistics in codebook which can be used in certain plots. To maintain the uniformity through out we refrained from using that data
+
+#Number of Attacks per Year(Excluding 1993)
+```{r}
+No_of_Attacks <- gtd_70to15 %>% group_by(iyear) %>% summarise(Total = n())
+ggplot(No_of_Attacks, aes(iyear, Total)) + geom_point(color = 'Blue') + geom_line() + scale_x_continuous(breaks = seq(1970, 2015, 1)) + 
+  scale_y_continuous(breaks = seq(0, 20000, 1000))+ theme(axis.text.x = element_text(angle = 90)) + 
+  labs(title = "Total Attacks Per Year", x = "Year" , y = "NUmber of Attacks")
+
+
+```
+
+
+#Number of Bombings per Year(Excluding 1993)
+```{r}
+No_of_Bombings <- gtd_70to15 %>% group_by(iyear) %>% filter(attacktype1 == 3) %>% summarise(Total = n())
+ggplot(No_of_Bombings, aes(iyear, Total)) + geom_point(color = 'Blue') + geom_line() + scale_x_continuous(breaks = seq(1970, 2015, 1)) + 
+  scale_y_continuous(breaks = seq(0, 20000, 1000))+ theme(axis.text.x = element_text(angle = 90)) + 
+  labs(title = "Total Bombings Per Year", x = "Year" , y = "NUmber of Bombings")
+
+```
+
+
+#Terrorist attacks region wise per year 
+```{r}
+Attacks_rw = gtd_70to15 %>% group_by(iyear, region_txt) %>%  summarise(Total = n())
+ggplot(Attacks_rw, aes(iyear, Total)) + geom_line(aes(color = region_txt))  + facet_wrap(~region_txt) + scale_x_continuous(breaks = seq(1970, 2015, 5)) + theme(legend.position = 'bottom', axis.text.x = element_text(angle = 90)) + labs(title = 'Terrorist Attacks Region Wise per Year', x = 'Year', y = 'Number of Attacks') + scale_color_discrete('')
+```
+
+#Top 5 types of Terror Attacks Per Region
+```{r}
+Attacks_rw = gtd_70to15 %>% group_by(region_txt, attacktype1_txt) %>%  summarise(Total = n()) %>% top_n(5, wt = Total)
+ggplot(Attacks_rw, aes(attacktype1_txt, Total, fill = attacktype1_txt)) + geom_bar(stat = 'Identity') + facet_wrap(~region_txt, scales = 'free') + theme(legend.position = 'bottom', axis.text.x = element_blank(), axis.ticks.x = element_blank()) + labs(title = 'Top 5 types of Terror Attacks Per Region', x = 'Attack Type', y = 'Total Attacks') + scale_fill_discrete(name = '')
+
+```
+
+
+#Heaviest hit Target types (Based on both Killed and wounded)
+```{r}
+hittypes = gtd_70to15 %>% group_by(targtype1_txt) %>% summarise(Total = sum(sum(nkill, nwound, na.rm = T)))
+ggplot(hittypes, aes(reorder(targtype1_txt, -Total), Total, fill = targtype1_txt)) + geom_bar(stat = 'Identity') +  theme(legend.position = 'bottom', axis.text.x = element_blank(), axis.ticks.x = element_blank()) + scale_y_continuous(breaks = seq(0, 250000, 25000)) + labs(title = "Heaviest Hit Target Types(Killed and Wounded)", x = 'Target Type', y = 'Total')
+```
+
+
+#Terrorist attack in India and Pakistan in last 45 years(Excluding 1993)
+```{r}
+Attacks_IP = gtd_70to15 %>% filter(country_txt == 'India' | country_txt == 'Pakistan') %>% group_by(iyear, country_txt) %>% summarise(Total = n())
+ggplot(Attacks_IP, aes(iyear, Total, color = country_txt)) + geom_line() + geom_point() + scale_x_continuous(breaks = seq(1970, 2015, 1)) + scale_y_continuous(breaks = seq(0, 2500, 100)) + theme(axis.text.x = element_text(angle = 90), legend.position = 'bottom') + labs(title = 'Terrorist Attacks in India and Pakistan for last 45 Years(Excluding 1993)', x = 'Year', y = 'Number Of Attacks') + scale_color_discrete(name = '')
+```
+
+
+#Terrorist Attacks in United States Vs Russian federation / USSR for last 45 Years(Excluding1993)
+```{r}
+Attacks_ = gtd_70to15 %>% filter(country_txt == 'United States' | country_txt == 'Russia' | country_txt == 'Soviet Union') %>% group_by(iyear, country_txt) %>% summarise(Total = n())
+ggplot(Attacks_, aes(iyear, Total, color = country_txt)) + geom_line() + geom_point() + scale_x_continuous(breaks = seq(1970, 2015, 1)) + scale_y_continuous(breaks = seq(0, 500, 100)) + theme(axis.text.x = element_text(angle = 90), legend.position = 'bottom') + labs(title = 'Terrorist Attacks in U.S. and Russian Federation / USSR for last 45 Years', x = 'Year', y = 'Number Of Attacks') + scale_color_discrete(name = '')
+```
+
+
+#Countries Having Most Casualities
+```{r}
+Most_Casulaties = gtd_70to15 %>% group_by(country_txt) %>% summarise(Total = sum(sum(nkill, nwound, na.rm = T))) %>% top_n(10, wt = Total)
+ggplot(Most_Casulaties, aes(reorder(country_txt, -Total), Total)) + geom_bar(stat = 'Identity', width = 0.4,aes(fill = country_txt)) + geom_text(aes(label = Total), position = position_dodge(width = .9), vjust = -0.25) + theme(legend.position = 'bottom', axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) + labs(title = 'Countries Having Most Casualities', x = 'Country', y = 'Number of Casualities') + scale_fill_discrete(name = '')
+```
+
+
+#Evolution of Casualities throughout years(Excluding 1993)
+```{r}
+Casulaties_years = gtd_70to15 %>% group_by(iyear) %>% summarise(Total = round(sum(sum(nkill, nwound, na.rm = T))))
+ggplot(Casulaties_years, aes(iyear, Total)) + geom_line() + geom_point(color = 'blue') +  scale_x_continuous(breaks = seq(1970, 2015, 1)) + scale_y_continuous(breaks = seq(0, 85000, 5000)) + theme(axis.text.x = element_text(angle = 90)) + labs(title = 'Casualities through Years', x = 'Year', y = 'Number of Casualities')
+
+
+```
+
+
+#Casualities by Weapon Type
+```{r}
+Casualities_weapontype = gtd_70to15 %>% group_by(weaptype1_txt) %>% summarise(Total = round(sum(sum(nkill, nwound, na.rm = T))))
+ggplot(Casualities_weapontype, aes(reorder(weaptype1_txt, -Total), Total)) + geom_bar(stat = 'Identity', width = 0.4, aes(fill = weaptype1_txt)) + geom_text(aes(label = Total), position = position_dodge(width = .9), vjust = -0.25) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.position = 'bottom') + scale_y_continuous(breaks = seq(0, 500000, 25000)) + labs(title = 'Casualities by weapon type', x = 'Weapon Type', y = 'NUmber of Casualities')
+```
+
+#Most Targeted Nationalities
+```{r}
+Target_nat = gtd_70to15 %>% group_by(natlty1_txt) %>% summarise(Total = n()) %>% top_n(10, wt = Total)
+ggplot(Target_nat, aes(reorder(natlty1_txt, -Total), Total, fill = natlty1_txt)) + geom_bar(stat = 'Identity', width = 0.4) + geom_text(aes(label = Total), position = position_dodge(width = .9), vjust = -0.25) + theme(legend.position = 'bottom', axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) + labs(title = 'Most Targeted Nationalities', x = 'Nationality', y = 'NUmber Of Attacks') + scale_fill_discrete(name = '')
+```
+
+
+##Countries defending terror attacks depends on various factors like Geographical Area, Population
+##Tried to plot the safest country in two segments 1) with terror attacks between 100 and 1000 2)greater than 1000
+
+```{r}
+safestcountry = gtd_70to15 %>% group_by(country_txt) %>% summarise(Total = sum(sum(nkill, nwound, na.rm = T)))
+safestcountry1 = gtd_70to15 %>% group_by(country_txt) %>% summarise(Totalkilled = sum(nkill, na.rm = T))
+safestcountry2 = merge(safestcountry,safestcountry1, by = 'country_txt')
+safestcountry2$prop = round((safestcountry2$Totalkilled / safestcountry2$Total) * 100)
+safestcountry_100 = safestcountry2 %>% filter(Total <= 100) %>% top_n(-5, wt = prop)
+safestcountry_101to1000 = safestcountry2 %>% filter(Total >= 100 & Total <= 1000) %>% top_n(-5, wt = prop)
+safestcountry_gtr_1000 = safestcountry2 %>% filter(Total >= 1000) %>% top_n(-5, wt = prop)
+
+
+##Safest Country with Terror Attacks between 100 and 1000
+gg2 = ggplot(safestcountry_101to1000, aes(reorder(country_txt, prop), prop, fill = country_txt)) + geom_bar(stat = 'Identity', width = 0.4) + geom_text(aes(label = Total), position = position_dodge(width = .9))+ theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank()) + scale_fill_discrete(name = 'Country')+ labs(title = "Safest Country with terror attacks between 100 and 1000", y = "Proportion of killed&Wounded")
+
+##Safest Country with Terror Attacks greater than 1000
+gg3 = ggplot(safestcountry_gtr_1000, aes(reorder(country_txt, prop), prop, fill = country_txt)) + geom_bar(stat = 'Identity', width = 0.4) + geom_text(aes(label = Total), position = position_dodge(width = .9)) + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.title.x = element_blank()) + scale_fill_discrete(name = 'Country') + labs(title = "Safest Country with terror attacks greater than 1000", y = "Proportion of killed&Wounded")
+grid.arrange(gg2, gg3)
+```
+
